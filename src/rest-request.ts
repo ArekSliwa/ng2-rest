@@ -201,9 +201,16 @@ export class RestRequest {
                     client.open(method, url, false);
 
                     var headersMap: Map<string, string[]> = headers._headers;
-                    if (headersMap) headersMap.forEach((v, k) => {
-                        client.setRequestHeader(k, v.join(';'))
-                    })
+                    if (headersMap) 
+                        if(headersForIE !== null) {
+                            for(var key in headersForIE) {
+                                client.setRequestHeader(key, headersForIE[key]);
+                            }
+                        } else {
+                            headersMap.forEach(function (v, k) {
+                                client.setRequestHeader(k, v.join(';'));
+                            });
+                        }
 
                     client.send(representationOfDesiredState);
 
@@ -241,7 +248,7 @@ export class RestRequest {
                 let data: ReqParams = e.data;
                 if (data) {
                     // let res = request(data.url, data.method, eval('new RestHeaders(data.headers)') , data.body);
-                    let res = request(data.url, data.method, data.headers as any, data.body, data.jobid);
+                    let res = request(data.url, data.method, data.headers as any, data.body, data.jobid, data.headersForIE);
                     res['method'] = data.method;
                     self.postMessage(res, undefined)
                 }
@@ -267,7 +274,14 @@ export class RestRequest {
             // let workerFN = require('!raw-loader!awesome-typescript-loader!./rest-headers.ts')
             // console.log('workerFN', workerFN)
             // RestRequest._worker.postMessage(workerFN)
-            URL.revokeObjectURL(RestRequest.blobURL);
+
+            var isIE = /*@cc_on!@*/false || !!document.documentMode, // Internet Explorer 6-11
+            isEdge = !isIE && !!window.StyleMedia; // Edge
+
+
+            if(!isIE && !isEdge) {
+                URL.revokeObjectURL(RestRequest.blobURL);
+            }
         }
         this.worker = RestRequest._worker;
 
@@ -342,7 +356,16 @@ export class RestRequest {
     private req(url: string, method: Http.HttpMethod, headers?: RestHeaders, body?: any, jobid?: number) {
 
         if (this.workerActive) {
-            this.worker.postMessage({ url, method, headers, body, jobid });
+
+            var headersForIE = {};
+            if (isIE) {
+                headers._headers.forEach(function (v, k) {
+                    headersForIE[k] = v.join(';');
+                });
+            } else {
+                headersForIE = null;
+            }
+            this.worker.postMessage({ url, method, headers, body, jobid, headersForIE });
         } else {
             let res = this.request(url, method, headers, body);
             this.handlerResult(res, method, jobid);
