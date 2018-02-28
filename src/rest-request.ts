@@ -279,10 +279,6 @@ export class RestRequest {
             // console.log('workerFN', workerFN)
             // RestRequest._worker.postMessage(workerFN)
 
-            var isIE = /*@cc_on!@*/false || !!document.documentMode, // Internet Explorer 6-11
-            isEdge = !isIE && !!window.StyleMedia; // Edge
-
-
             if(!isIE && !isEdge) {
                 URL.revokeObjectURL(RestRequest.blobURL);
             }
